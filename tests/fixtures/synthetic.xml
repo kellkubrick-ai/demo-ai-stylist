@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC TEST DATA ONLY: not an example of any real store's XML fields. -->
+<catalog>
+  <categories>
+    <category id="women"><name>Женщинам</name></category>
+    <category id="tops" parentId="women"><name>Верх</name></category>
+    <category id="bottoms" parentId="women"><name>Низ</name></category>
+    <category id="footwear"><name>Обувь</name></category>
+    <category id="dresses"><name>Платья</name></category>
+    <category id="sets"><name>Комплекты</name></category>
+    <category id="bags"><name>Сумки</name></category>
+    <category id="new"><name>Новинки</name></category>
+  </categories>
+  <offers>
+    <offer id="0001" available="true"><model>top-01</model><name>Блуза</name><description>Блуза из каталога.</description><kind>blouse</kind><price>100.10</price><oldprice>200</oldprice><currencyId>RUR</currencyId><color>Чёрный</color><size>M</size><sku>sku-0001</sku><barcode>0000000000001</barcode><audience>women</audience><categoryId>tops</categoryId><categoryId>new</categoryId><picture>https://images.example.org/top-black.png</picture><url>https://shop.example.org/top-black</url></offer>
+    <offer id="0002" available="true"><model>top-01</model><name>Блуза</name><description>Блуза из каталога.</description><kind>blouse</kind><price>110.10</price><currencyId>RUR</currencyId><color>Чёрный</color><size>S</size><sku>sku-0002</sku><barcode>0000000000002</barcode><audience>women</audience><categoryId>tops</categoryId><categoryId>new</categoryId><picture>https://images.example.org/top-black.png</picture><url>https://shop.example.org/top-black</url></offer>
+    <offer id="0003" available="true"><model>top-01</model><name>Блуза</name><kind>blouse</kind><price>120</price><currencyId>RUR</currencyId><color>Бежевый</color><size>M</size><audience>women</audience><categoryId>tops</categoryId><picture>https://images.example.org/top-beige.png</picture></offer>
+    <offer id="0004" available="true"><model>bottom-01</model><name>Брюки</name><kind>trousers</kind><price>200.20</price><currencyId>RUR</currencyId><color>Черный</color><size>M</size><audience>women</audience><categoryId>bottoms</categoryId><picture>https://images.example.org/bottom.png</picture></offer>
+    <offer id="0005" available="false"><model>bottom-01</model><name>Брюки</name><kind>trousers</kind><price>210.20</price><currencyId>RUR</currencyId><color>Черный</color><size>S</size><audience>women</audience><categoryId>bottoms</categoryId><picture>https://images.example.org/bottom.png</picture></offer>
+    <offer id="0006" available="true"><model>shoe-01</model><name>Обувь без каблука</name><kind>shoes</kind><price>300.30</price><currencyId>RUR</currencyId><color>Черный</color><size>38</size><audience>women</audience><categoryId>footwear</categoryId><picture>https://images.example.org/shoes.png</picture></offer>
+    <offer id="0007" available="true"><model>shoe-01</model><name>Обувь без каблука</name><kind>shoes</kind><price>310.30</price><currencyId>RUR</currencyId><color>Черный</color><size>39</size><audience>women</audience><categoryId>footwear</categoryId><picture>https://images.example.org/shoes.png</picture></offer>
+    <offer id="0008" available="true"><model>dress-01</model><name>Платье</name><kind>dress</kind><price>400</price><currencyId>RUR</currencyId><color>Чёрный</color><size>M</size><audience>women</audience><categoryId>dresses</categoryId><picture>https://images.example.org/dress.png</picture></offer>
+    <offer id="0009" available="true"><model>set-01</model><name>Костюм комплектом</name><kind>suit</kind><price>500</price><currencyId>RUR</currencyId><color>Чёрный</color><size>M</size><bundle>true</bundle><audience>women</audience><categoryId>sets</categoryId><picture>https://images.example.org/set.png</picture></offer>
+    <offer id="0010" available="true"><model>cardigan-01</model><name>Кардиган</name><kind>cardigan</kind><price>150</price><currencyId>RUR</currencyId><color>Чёрный</color><size>M</size><audience>women</audience><categoryId>tops</categoryId><picture>https://images.example.org/cardigan.png</picture></offer>
+    <offer id="0011" available="true"><model>bag-01</model><name>Сумка</name><kind>bag</kind><price>50</price><currencyId>RUR</currencyId><color>Чёрный</color><size>midi</size><audience>women</audience><categoryId>bags</categoryId><picture>https://images.example.org/bag.png</picture></offer>
+  </offers>
+</catalog>

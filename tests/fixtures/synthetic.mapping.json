@@ -1,0 +1,26 @@
+{
+  "verified": true,
+  "verification_notes": "Verified ONLY against tests/fixtures/synthetic.xml. These synthetic fields are NOT a mapping of 12Storeez or any real store feed.",
+  "source_name": "synthetic-test-only",
+  "offer_tag": "offer",
+  "category_tag": "category",
+  "category_fields": {"id":"@id", "name":"name", "parent_id":"@parentId"},
+  "fields": {
+    "offer_id":"@id", "visual_id":"model", "title":"name", "description":"description",
+    "price":"price", "old_price":"oldprice", "currency":"currencyId",
+    "color":"color", "size":"size", "sku":"sku", "barcode":"barcode",
+    "product_url":"url"
+  },
+  "grouping":"model_color",
+  "category_paths":["categoryId"],
+  "image_paths":["picture"],
+  "availability":{"path":"@available", "operator":"equals", "true_values":["true"], "false_values":["false"]},
+  "currency_map":{"RUR":"RUB", "RUB":"RUB"},
+  "product_type_path":"kind",
+  "product_type_map":{"blouse":"blouse", "trousers":"trousers", "shoes":"shoes", "dress":"dress", "suit":"suit_set", "cardigan":"cardigan", "bag":"bag"},
+  "attributes": {
+    "audience":{"path":"audience"},
+    "bundle_confirmed":{"path":"bundle", "kind":"bool", "true_values":["true"], "false_values":["false"]},
+    "features":{"path":"feature", "kind":"list"}
+  }
+}

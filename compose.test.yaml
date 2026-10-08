@@ -1,0 +1,16 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: stylist_test
+      POSTGRES_USER: stylist
+      POSTGRES_PASSWORD: stylist
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stylist -d stylist_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20

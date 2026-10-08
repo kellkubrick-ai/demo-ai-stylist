@@ -1,0 +1,17 @@
+[
+  {"scenario_id":"dinner_minimal","user_request":"Нужен минималистичный образ на ужин, не слишком нарядный.","expected_hard_constraints":{}},
+  {"scenario_id":"dinner_no_heels","user_request":"Образ на свидание: без каблуков, хочу подчеркнуть талию.","expected_hard_constraints":{}},
+  {"scenario_id":"office_classic","user_request":"Сдержанный классический образ для работы в офисе.","expected_hard_constraints":{}},
+  {"scenario_id":"office_relaxed","user_request":"В офис без строгого дресс-кода: smart casual и свободная посадка.","expected_hard_constraints":{}},
+  {"scenario_id":"vacation_walk","user_request":"Образ для прогулок в отпуске, удобная обувь, без каблуков.","expected_hard_constraints":{}},
+  {"scenario_id":"evening_formal","user_request":"Нарядный вечерний образ для официального мероприятия.","expected_hard_constraints":{}},
+  {"scenario_id":"shoulders_covered","user_request":"На ужин, плечи обязательно должны быть закрыты.","expected_hard_constraints":{}},
+  {"scenario_id":"waist_emphasis","user_request":"Повседневный образ с акцентом на талии, без объёмного низа.","expected_hard_constraints":{}},
+  {"scenario_id":"low_contrast","user_request":"Спокойный образ в минимализме с низким контрастом цветов.","expected_hard_constraints":{}},
+  {"scenario_id":"black","user_request":"Полностью чёрный образ для ужина.","expected_hard_constraints":{"colors":["Чёрный"]}},
+  {"scenario_id":"item_budget","user_request":"Повседневный образ, каждая вещь не дороже 15000 рублей.","expected_hard_constraints":{"budget":{"currency":"RUB","max_item_price":"15000"}}},
+  {"scenario_id":"outfit_budget","user_request":"Полный образ для офиса до 30000 рублей суммарно, включая обувь и аксессуары.","expected_hard_constraints":{"budget":{"currency":"RUB","max_outfit_price":"30000"}}},
+  {"scenario_id":"separate_sizes","user_request":"Нужны верх и низ размера M и обувь размера 38; если система размера неизвестна, уточните.","expected_hard_constraints":{"sizes_by_role":{"top":["M"],"bottom":["M"],"shoes":["38"]}}},
+  {"scenario_id":"dress","user_request":"Соберите образ с платьем для ужина.","expected_hard_constraints":{"product_types":["dress"]}},
+  {"scenario_id":"purchasable_set","user_request":"Деловой образ с костюмом, который продаётся комплектом, и обувью.","expected_hard_constraints":{"product_types":["suit_set"]}}
+]

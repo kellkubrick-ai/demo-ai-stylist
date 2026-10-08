@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Offer elements copied from the 2026-10-06 12Storeez export. Category definitions are a
+     bounded subset of the source; 100173 and 100221 have no definition in the full export. -->
+<yml_catalog>
+  <shop>
+    <categories>
+      <category id="100003">Брюки</category>
+      <category id="100005">Верхняя одежда</category>
+      <category id="100017">Деним</category>
+      <category id="100057">Кашемир</category>
+      <category id="100058">Мужчинам</category>
+      <category id="100082">Женщинам</category>
+      <category id="100145">Пуховики</category>
+      <category id="100341">Online only</category>
+      <category id="100385">Одежда</category>
+    </categories>
+    <offers>
+      <offer id="101457" group_id="100138" type="vendor.model" available="false">
+        <categoryId>100003</categoryId><categoryId>100017</categoryId><categoryId>100082</categoryId>
+        <currencyId>RUR</currencyId>
+        <picture>https://image.12storeez.com/uploads/images/product/20170125/dzinsy-s-vysokoj-posadkoj-sinie/5ee721f50ef25-2.jpg</picture>
+        <model>Джинсы с высокой посадкой</model><article>22086532</article>
+        <url>https://12storeez.com/catalog/bruki/dzinsy-s-vysokoj-posadkoj-sinie</url>
+        <price>6900</price><barcode>2000000054711</barcode><balance>0</balance>
+        <SubscribersCount>5</SubscribersCount>
+        <param name="Артикул" code="article">22086532</param>
+        <param name="Размер" code="size">XS</param>
+        <param name="Цвет" code="color">Синий</param>
+        <param name="Новинка" code="new">НЕТ</param>
+        <param name="Наименование en" code="title-en">High waisted jeans</param>
+        <param name="Остаток в наличии" code="qty">0</param>
+        <param name="visibility" code="visibility">none</param>
+        <param name="пол" code="gender">женский</param>
+        <param name="Предзаказ" code="isPreorder">false</param>
+        <param name="Ранний доступ" code="isEarlyAccess">false</param>
+      </offer>
+      <offer id="101458" group_id="100138" type="vendor.model" available="false">
+        <categoryId>100003</categoryId><categoryId>100017</categoryId><categoryId>100082</categoryId>
+        <currencyId>RUR</currencyId>
+        <picture>https://image.12storeez.com/uploads/images/product/20170125/dzinsy-s-vysokoj-posadkoj-sinie/5ee721f50ef25-2.jpg</picture>
+        <model>Джинсы с высокой посадкой</model><article>22086532</article>
+        <url>https://12storeez.com/catalog/bruki/dzinsy-s-vysokoj-posadkoj-sinie</url>
+        <price>6900</price><barcode>2000000054728</barcode><balance>0</balance>
+        <SubscribersCount>22</SubscribersCount>
+        <param name="Артикул" code="article">22086532</param>
+        <param name="Размер" code="size">S</param>
+        <param name="Цвет" code="color">Синий</param>
+        <param name="Новинка" code="new">НЕТ</param>
+        <param name="Наименование en" code="title-en">High waisted jeans</param>
+        <param name="Остаток в наличии" code="qty">0</param>
+        <param name="visibility" code="visibility">none</param>
+        <param name="пол" code="gender">женский</param>
+        <param name="Предзаказ" code="isPreorder">false</param>
+        <param name="Ранний доступ" code="isEarlyAccess">false</param>
+      </offer>
+      <offer id="173080" group_id="117026" type="vendor.model" available="true">
+        <categoryId>100145</categoryId><categoryId>100005</categoryId><categoryId>100057</categoryId>
+        <categoryId>100058</categoryId><categoryId>100173</categoryId><categoryId>100221</categoryId>
+        <categoryId>100341</categoryId><categoryId>100385</categoryId>
+        <currencyId>RUR</currencyId>
+        <picture>https://image.12storeez.com/uploads/images/september25/fon/121023/68d537e11071f-66c779b1d1eb3-08-08-2024-lesha-51823.jpg</picture>
+        <model>Пуховик Altai из шерсти и кашемира</model><article>121023</article>
+        <url>https://12storeez.com/catalog/downjacket/puhovik-altai-iz-sersti-i-kasemira-121023</url>
+        <price>94000</price><barcode>2112102371006</barcode><balance>4</balance>
+        <SubscribersCount>0</SubscribersCount>
+        <param name="Артикул" code="article">121023</param>
+        <param name="Размер" code="size">S</param>
+        <param name="Цвет" code="color">Коричневый</param>
+        <param name="Новинка" code="new">НЕТ</param>
+        <param name="Наименование en" code="title-en" />
+        <param name="Остаток в наличии" code="qty">4</param>
+        <param name="visibility" code="visibility">all</param>
+        <param name="пол" code="gender">мужской</param>
+        <param name="Предзаказ" code="isPreorder">false</param>
+        <param name="Ранний доступ" code="isEarlyAccess">false</param>
+      </offer>
+    </offers>
+  </shop>
+</yml_catalog>
