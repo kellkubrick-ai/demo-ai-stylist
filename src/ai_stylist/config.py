@@ -1,7 +1,10 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
 
 class Settings(BaseSettings):
@@ -14,6 +17,10 @@ class Settings(BaseSettings):
     enrichment_model: str = ""
     stylist_model: str = ""
     response_model: str = ""
+    intent_reasoning_effort: ReasoningEffort = "medium"
+    enrichment_reasoning_effort: ReasoningEffort = "low"
+    stylist_reasoning_effort: ReasoningEffort = "high"
+    response_reasoning_effort: ReasoningEffort = "none"
     embedding_model: str = ""
     embedding_dimensions: int = Field(default=1536, ge=1)
     max_candidates: int = Field(default=30, ge=3, le=30)

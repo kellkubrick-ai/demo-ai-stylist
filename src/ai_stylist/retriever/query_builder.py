@@ -12,14 +12,12 @@ def normalize(value: str) -> str:
     return value.strip().casefold().replace("ё", "е")
 
 
-def allowed_types(intent: StylingIntent, slot: OutfitSlot) -> set[str]:
-    types = set(slot.product_type_constraints or ROLE_TYPES[slot.role])
-    requested = set(intent.product_types) & set(ROLE_TYPES[slot.role])
-    return types & requested if requested else types
+def allowed_types(slot: OutfitSlot) -> set[str]:
+    return set(slot.product_type_constraints or ROLE_TYPES[slot.role])
 
 
 def product_matches(product: ProductGroup, intent: StylingIntent, slot: OutfitSlot) -> bool:
-    if product.product_type not in allowed_types(intent, slot):
+    if product.product_type not in allowed_types(slot):
         return False
     if slot.role == "set" and product.catalog_attributes.get("bundle_confirmed") is not True:
         return False
@@ -64,7 +62,7 @@ def sql_normalize(column):
 def slot_filters(intent: StylingIntent, slot: OutfitSlot):
     product = t.product_groups
     offer = t.offers
-    conditions = [product.c.product_type.in_(allowed_types(intent, slot))]
+    conditions = [product.c.product_type.in_(allowed_types(slot))]
     if slot.role == "set":
         conditions.append(product.c.catalog_attributes["bundle_confirmed"].as_boolean() == true())
     if intent.colors:

@@ -29,10 +29,16 @@ Model settings use OpenRouter IDs such as `upstream-provider/model-name`, withou
 `openrouter:` prefix. `INTENT_MODEL` interprets the request and plans outfit roles;
 `ENRICHMENT_MODEL` describes catalog photos offline; `STYLIST_MODEL` evaluates and assembles
 looks from retrieved candidates; `RESPONSE_MODEL` writes the final user-facing explanation.
-The current local `.env` uses `openai/gpt-6-luna` for intent, enrichment and response,
-`openai/gpt-6.1-sol` for styling, and `openai/text-embedding-3-small` for vectors.
+The current local `.env` uses `openai/gpt-6-luna` for intent and response,
+`google/gemini-3.8-flash` for enrichment and styling, and
+`openai/text-embedding-3-small` for vectors.
 Installing and running tests do not call the paid models; `enrich`, `embeddings`, `style`, `eval`
 and the bot do.
+
+Reasoning effort is configured independently per agent. The current defaults use `medium` for
+intent interpretation, `low` for catalog enrichment, `high` for visual styling and compatibility,
+and `none` for final response wording. Some providers support only a subset of effort levels;
+Gemini 3.8 Flash supports `low`, `medium`, and `high`, so enrichment uses its lowest level.
 
 Set `EMBEDDING_MODEL` and its `EMBEDDING_DIMENSIONS` before migrating a new database. Stored document
 and query vectors must use the same model/dimension. A dimension change needs a matching database
@@ -49,14 +55,14 @@ downloading a URL retains the full raw feed under `data/feeds/<sha256>.xml` for 
 
 ```powershell
 uv run ai-stylist inspect "https://12storeez.com/export/export_mindbox.xml" --offer-tag offer --category-tag category --limit 5
-uv run ai-stylist import "https://12storeez.com/export/export_mindbox.xml" --mapping catalog_mappings/12storeez.json --all-groups --report data/reports/12storeez-import.json
+uv run ai-stylist import "https://12storeez.com/export/export_mindbox.xml" --mapping catalog_mappings/12storeez.json --report data/reports/12storeez-import.json
 uv run ai-stylist catalog-report
 ```
 
-The current feed contains 102,882 offers in 23,695 visual groups; 10,409 available offers belong
-to 2,466 groups. `--all-groups` imports the entire feed without calling VLM or embedding models.
-Omitting the flag retains the mapping's active-only mode: all 12,919 size offers in groups with at
-least one available offer, excluding wholly unavailable groups. The source `article` repeats across
+The checked feed contains 102,882 offers in 23,695 visual groups. The 12Storeez mapping imports only
+the 9,482 offers with `available=true` and `visibility=all`, in 2,031 groups. Reimport removes
+previously stored offers and groups that no longer meet this rule. `--all-groups` does not bypass
+the offer filter; importing does not call VLM or embedding models. The source `article` repeats across
 sizes, so the distinct XML offer ID is the
 commercial key. The feed references category IDs without category definitions; the importer keeps
 those memberships with explicit placeholder names. Editorial category `Комплекты` does not prove
@@ -103,12 +109,23 @@ uv run ai-stylist snapshot --output data/catalog-snapshot.jsonl
 ```
 
 Suitable products have a normalized garment type, available offers and exact-variant photo URLs.
-Enrichment validates actual image bytes and sends up to two labeled multimodal photos. Only checked,
-usable photos enter runtime retrieval. Unsupported or inaccessible photos are reported explicitly.
+Enrichment sends up to two labeled public image URLs for one product per model request. A successful
+model response marks those URLs usable for runtime retrieval. Stylist requests still validate and
+attach image bytes locally. Before sending them to the stylist, images are resized and JPEG-encoded
+to at most 400 KB each, keeping the maximum 30-product, two-photo request below Gemini's 30 MB image
+payload limit. Inaccessible images are reported explicitly.
 
 Preparation persists each successful product immediately. Running the commands again reuses
 unchanged successful results and retries missing results. Use `--force` for an explicit rebuild.
-Enrichment concurrency defaults to two; reports are written to `data/reports/*.jsonl`. Price,
+Enrichment writes readable Markdown traces to `data/logs/enrichment/*.md` by default. Each product
+section contains the complete model instructions, normalized product input, clickable image URLs and
+previews, structured model output, usage and errors. Pass a `.jsonl` path to `--report` when a
+machine-readable trace is preferable. Add `--log-console` to also print each record as JSON while the
+command runs. API keys and binary image data are never logged.
+Embedding input is a short product description assembled from catalog facts and available visual
+enrichment, without JSON field names or empty values. Changing this text format does not update
+previously saved vectors; `uv run ai-stylist embeddings --force` rebuilds them with API calls.
+Enrichment concurrency defaults to two. Price,
 availability or size-only changes do not invalidate enrichment. Descriptive/photo changes do;
 updating enrichment invalidates the corresponding embedding. No enrichment runs during user requests.
 
@@ -116,6 +133,17 @@ Before processing a large real catalog, run `uv run ai-stylist enrich --limit 5`
 `uv run ai-stylist embeddings --limit 5` to smoke-test the configured models. Then run both commands
 without `--limit` to prepare the entire suitable catalog. The limit affects preparation only.
 Preparation commands with per-product failures return failure counts and retain detailed reports.
+
+The curated women's demo subset is recorded in `evals/catalog/demo-100.json`: 100 distinct
+model/color products with available offers, previously checked photos and stored enrichment.
+The stored enrichment for these 100 was produced by `openai/gpt-6-luna`, not the current Google
+VLM configuration; a Google-specific comparison requires an explicit `enrich --force` run first.
+`enrich` and `embeddings` accept `--selection evals/catalog/demo-100.json` to process only those
+IDs; the manifest's catalog version must match the database. Selecting products does not call
+models or delete catalog rows. With an otherwise empty embeddings table, embedding only this
+selection also limits runtime search to the 100 selected products.
+Eight manually labeled retrieval checks are in `evals/catalog/demo-100-search-probes.json`;
+they are candidate-relevance targets, not mandatory final outfit items.
 
 Snapshots contain all normalized products/offers/categories, saved enrichment and model IDs,
 embeddings, photo verification status, source/version metadata and a completion marker. Existing

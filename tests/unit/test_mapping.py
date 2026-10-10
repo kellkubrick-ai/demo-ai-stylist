@@ -85,6 +85,22 @@ def test_verified_12storeez_sample_keeps_group_article_and_offer_ids_separate():
     assert not first.offers[0].available
 
 
+@pytest.mark.parametrize(
+    "available,visibility,expected",
+    [("true", "all", True), ("false", "all", False), ("true", "none", False), ("true", None, False)],
+)
+def test_12storeez_import_requires_available_and_visible(available, visibility, expected):
+    mapping = FeedMapping.model_validate_json(
+        (Path(__file__).parents[2] / "catalog_mappings" / "12storeez.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    element = fromstring(f'<offer available="{available}" />')
+    if visibility is not None:
+        SubElement(element, "param", code="visibility").text = visibility
+    assert mapping.offer_in_scope(element) is expected
+
+
 def test_12storeez_category_priority_and_scoped_title_rules():
     mapping = FeedMapping.model_validate_json(
         (Path(__file__).parents[2] / "catalog_mappings" / "12storeez.json").read_text(

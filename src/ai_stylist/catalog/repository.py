@@ -3,7 +3,7 @@ from contextlib import nullcontext
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ai_stylist.catalog import tables as t
@@ -53,6 +53,21 @@ class CatalogRepository:
         # Full feed refresh: missing/invalid offers cannot remain purchasable.
         await connection.execute(update(t.offers).values(available=False))
         await connection.execute(delete(t.product_categories))
+
+    async def prune_to_imported(self, connection, offer_ids: set[str], product_ids: set[str]):
+        stale = t.product_groups.c.id.not_in(product_ids)
+        await connection.execute(delete(t.offers).where(t.offers.c.id.not_in(offer_ids)))
+        await connection.execute(
+            delete(t.related_products).where(
+                or_(
+                    t.related_products.c.source_product_group_id.not_in(product_ids),
+                    t.related_products.c.target_product_group_id.not_in(product_ids),
+                )
+            )
+        )
+        for table in (t.product_images, t.product_enrichments, t.product_embeddings):
+            await connection.execute(delete(table).where(table.c.product_group_id.not_in(product_ids)))
+        await connection.execute(delete(t.product_groups).where(stale))
 
     async def invalidate_visual(self, connection, product_id):
         await connection.execute(

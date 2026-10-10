@@ -148,7 +148,7 @@ async def test_real_feed_sample_imports_shared_article_and_unknown_categories(re
     mapping = FeedMapping.model_validate_json(
         (FIXTURES.parents[1] / "catalog_mappings" / "12storeez.json").read_text(encoding="utf-8")
     )
-    mapping = mapping.model_copy(update={"active_groups_only": False})
+    mapping = mapping.model_copy(update={"active_groups_only": False, "required_visibility": None})
     report = await import_feed(
         repository, FIXTURES / "12storeez-sample.xml", mapping, "verified-raw-sample"
     )
@@ -177,6 +177,23 @@ async def test_real_feed_active_group_selection_covers_entire_sample(repository)
     assert report["skipped_inactive_offers"] == 2
     assert report["offers"] == report["products"] == 1
     assert (await repository.report())["available_offers"] == 1
+
+
+async def test_12storeez_reimport_removes_previously_imported_inactive_rows(repository):
+    mapping = FeedMapping.model_validate_json(
+        (FIXTURES.parents[1] / "catalog_mappings" / "12storeez.json").read_text(encoding="utf-8")
+    )
+    unfiltered = mapping.model_copy(
+        update={"active_groups_only": False, "required_visibility": None}
+    )
+    await import_feed(repository, FIXTURES / "12storeez-sample.xml", unfiltered, "old-import")
+    assert (await repository.report())["offers"] == 3
+
+    await import_feed(repository, FIXTURES / "12storeez-sample.xml", mapping, "filtered-import")
+    report = await repository.report()
+    assert report["offers"] == report["products"] == 1
+    records = [record async for record in repository.iter_products(eligible_only=False)]
+    assert [record.product.source_model_id for record in records] == ["121023"]
 
 
 async def test_truncated_snapshot_is_rolled_back(repository, mapping, tmp_path):

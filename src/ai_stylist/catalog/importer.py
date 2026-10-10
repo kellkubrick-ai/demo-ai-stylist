@@ -63,12 +63,14 @@ async def import_feed(repository, path: Path, mapping: FeedMapping, source: str)
     mapping_hash = hashlib.sha256(mapping_bytes).hexdigest()
     version = hashlib.sha256((feed_hash + mapping_hash).encode()).hexdigest()
     report = {"version": version, "source": source, "offers": 0, "products": 0, "errors": []}
+    if mapping.required_visibility is not None or mapping.active_groups_only:
+        report["skipped_inactive_offers"] = 0
     active_groups = None
     if mapping.active_groups_only:
         active_groups = set()
         for element in xml_elements(path, mapping.offer_tag):
             try:
-                if mapping.availability.evaluate(element):
+                if mapping.offer_in_scope(element):
                     group_id = scalar(element, mapping.fields["visual_id"])
                     if group_id:
                         active_groups.add(group_id)
@@ -77,7 +79,6 @@ async def import_feed(repository, path: Path, mapping: FeedMapping, source: str)
         if not active_groups:
             raise ValueError("No source groups have verified available offers")
         report["selected_active_groups"] = len(active_groups)
-        report["skipped_inactive_offers"] = 0
     undefined_categories = Counter()
     seen_offers = set()
     identities = {}
@@ -88,6 +89,9 @@ async def import_feed(repository, path: Path, mapping: FeedMapping, source: str)
         await repository.begin_import(connection)
         for position, element in enumerate(xml_elements(path, mapping.offer_tag), 1):
             try:
+                if mapping.required_visibility is not None and not mapping.offer_in_scope(element):
+                    report["skipped_inactive_offers"] += 1
+                    continue
                 if active_groups is not None:
                     visual_id = scalar(element, mapping.fields["visual_id"])
                     if visual_id not in active_groups:
@@ -147,6 +151,8 @@ async def import_feed(repository, path: Path, mapping: FeedMapping, source: str)
         report["types"] = dict(counts)
         report["undefined_category_ids"] = dict(undefined_categories)
         await repository.sync_images(connection, images)
+        if mapping.required_visibility is not None:
+            await repository.prune_to_imported(connection, seen_offers, set(identities))
         await repository.finish_import(connection, version, source, report)
     return report
 

@@ -21,6 +21,7 @@
   },
   "grouping": "visual_id",
   "active_groups_only": true,
+  "required_visibility": "all",
   "category_paths": ["categoryId"],
   "image_paths": ["picture"],
   "availability": {

@@ -863,11 +863,33 @@ class ProductEnrichment(BaseModel):
     enriched_description: str | None = None
 ```
 
+The contract uses two semantic groups:
+
+- photo-grounded observation fields: `silhouette`, `fit`, `texture`, `visual_weight`, and
+  `color_characteristics`;
+- styling interpretation fields: `styles`, `formality`, `occasions`, and
+  `layering_suitability`.
+
+`styles`, `occasions`, `color_characteristics`, and `layering_suitability` contain at most 4, 4,
+4, and 3 values respectively. `visual_weight` is `лёгкий`, `средний`, `тяжёлый`, or null.
+Singular fields use null when uncertain or inapplicable; list fields use an empty list.
+
 ## 9.3 Enrichment rules
 
-The VLM may infer visible styling characteristics.
+The VLM may infer visible styling characteristics. Silhouette, fit, texture, visual weight, and
+color characteristics must be grounded in the actual product photos. Catalog color may confirm
+color, and source categories may inform occasions, but categories do not override visual evidence.
 Describe visible fit and silhouette of the garment, not its exact fit on a future user.
 Visible texture may be inferred; exact fiber composition remains an original catalog fact.
+
+Construction claims must match the available evidence. When a mechanism is not confirmed, describe
+the observed geometry instead of asserting a wrap, functional pocket, closure, lining, or detachable
+part. `layering_suitability` describes visual layering role and compatibility only; it must not claim
+physical room, warmth, stretch, freedom of movement, or guaranteed wearability. Return an empty list
+when layering is not visually applicable, including most shoes and bags.
+
+The enrichment prompt must not include outfit construction, budget, or accessory-selection rules.
+Those rules belong to the separate runtime stylist task.
 
 The VLM must not infer:
 - price;

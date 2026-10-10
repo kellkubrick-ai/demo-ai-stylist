@@ -5,7 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 from alembic import command
@@ -46,7 +46,9 @@ def parser():
     importer.add_argument("--mapping", type=Path, required=True)
     importer.add_argument("--report", type=Path)
     importer.add_argument(
-        "--all-groups", action="store_true", help="Include groups with no available offers"
+        "--all-groups",
+        action="store_true",
+        help="Disable active-group selection, not offer filters",
     )
     commands.add_parser("catalog-report")
     for name in ("enrich", "embeddings"):
@@ -56,6 +58,15 @@ def parser():
         )
         preparation.add_argument("--report", type=Path)
         preparation.add_argument("--limit", type=int, help="Model smoke test; unset processes all")
+        preparation.add_argument(
+            "--selection", type=Path, help="JSON manifest of product IDs to process"
+        )
+        if name == "enrich":
+            preparation.add_argument(
+                "--log-console",
+                action="store_true",
+                help="Print each per-product VLM trace as JSON",
+            )
     snapshot = commands.add_parser("snapshot")
     snapshot.add_argument("--output", type=Path, required=True)
     restore = commands.add_parser("restore", help="Restore catalog snapshot into an empty database")
@@ -99,6 +110,25 @@ def feed_path(source: str, settings: Settings) -> Path:
     except Exception:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def load_selection(path: Path) -> tuple[str, set[str]]:
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("items"), list):
+        raise ValueError("Selection must contain an items list")
+    version = manifest.get("catalog_version")
+    if not isinstance(version, str) or not version:
+        raise ValueError("Selection requires a catalog_version")
+    ids = [item.get("product_id") for item in manifest["items"] if isinstance(item, dict)]
+    if not ids or len(ids) != len(manifest["items"]):
+        raise ValueError("Selection requires product IDs")
+    try:
+        ids = [str(UUID(value)) for value in ids]
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("Selection contains an invalid product ID") from exc
+    if len(set(ids)) != len(ids):
+        raise ValueError("Selection contains duplicate product IDs")
+    return version, set(ids)
 
 
 async def execute(args, settings, source_path=None):
@@ -153,9 +183,20 @@ async def execute(args, settings, source_path=None):
             return await export_snapshot(repository, args.output, settings.embedding_dimensions)
         if args.command == "restore":
             return await restore_snapshot(repository, args.snapshot, settings.embedding_dimensions)
-        report_path = (
-            args.report or settings.data_dir / "reports" / f"{args.command}-{uuid4()}.jsonl"
-        )
+        product_ids = None
+        if args.selection:
+            version, product_ids = load_selection(args.selection)
+            if version != await repository.version():
+                raise ValueError("Selection catalog_version does not match the current catalog")
+            existing = await repository.get_products(list(product_ids))
+            if {record.product.id for record in existing} != product_ids:
+                raise ValueError("Selection contains product IDs missing from the catalog")
+        if args.report:
+            report_path = args.report
+        elif args.command == "enrich":
+            report_path = settings.data_dir / "logs" / "enrichment" / f"enrich-{uuid4()}.md"
+        else:
+            report_path = settings.data_dir / "reports" / f"{args.command}-{uuid4()}.jsonl"
         async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
             if args.command == "embeddings":
                 return await rebuild_embeddings(
@@ -164,6 +205,7 @@ async def execute(args, settings, source_path=None):
                     report_path,
                     force=args.force,
                     limit=args.limit,
+                    product_ids=product_ids,
                 )
             renderer = PromptRenderer(settings.knowledge_dir)
             agent = make_agent(settings, "enrichment", ProductEnrichment, renderer)
@@ -174,15 +216,20 @@ async def execute(args, settings, source_path=None):
                     ImageLoader(client, settings.image_max_bytes, repository),
                     repository,
                     settings.enrichment_model,
+                    settings.enrichment_reasoning_effort,
                 )
-                return await prepare_catalog(
+                result = await prepare_catalog(
                     repository,
                     service,
                     report_path,
                     force=args.force,
                     concurrency=settings.offline_concurrency,
                     limit=args.limit,
+                    product_ids=product_ids,
+                    log_console=args.log_console,
                 )
+                result["report_path"] = str(report_path)
+                return result
             finally:
                 await agent.model.client.close()
     finally:

@@ -1,0 +1,74 @@
+{
+  "name": "demo-100-retrieval-probes",
+  "selection": "evals/catalog/demo-100.json",
+  "note": "Manual relevance checks for the retrieval candidate list, not guaranteed final outfit items.",
+  "cases": [
+    {
+      "id": "black_velvet_dress",
+      "role": "dress",
+      "query": "Черное вечернее платье из японского бархата",
+      "expected_product_ids": [
+        "2040c317-883b-524a-9629-09c94379aa68"
+      ]
+    },
+    {
+      "id": "linen_trousers",
+      "role": "bottom",
+      "query": "Молочные брюки из плотного льна",
+      "expected_product_ids": [
+        "0de6be4d-9138-54a1-84e4-a34bbe2724d9"
+      ]
+    },
+    {
+      "id": "straight_denim",
+      "role": "bottom",
+      "query": "Светло-голубые прямые джинсы",
+      "expected_product_ids": [
+        "283110d6-cad8-5421-b4d9-b9525505e803"
+      ]
+    },
+    {
+      "id": "balloon_denim",
+      "role": "bottom",
+      "query": "Темно-серые джинсы-баллоны",
+      "expected_product_ids": [
+        "28bda1eb-8a91-5011-9d82-84deb1eb4301"
+      ]
+    },
+    {
+      "id": "pumps_not_mules",
+      "role": "shoes",
+      "query": "Черные лодочки, не мюли",
+      "expected_product_ids": [
+        "1a4bef57-d743-5bf7-b590-5fb7398572a6"
+      ],
+      "excluded_product_ids": [
+        "26b90f98-7787-530e-bde7-1a3c044649ec"
+      ]
+    },
+    {
+      "id": "lace_dress",
+      "role": "dress",
+      "query": "Черное кружевное платье для вечера",
+      "expected_product_ids": [
+        "3e249de2-b2eb-5f4b-91cf-31434f3c68cf"
+      ]
+    },
+    {
+      "id": "cashmere_mittens",
+      "role": "accessory",
+      "query": "Кашемировые варежки",
+      "expected_product_ids": [
+        "323704f0-e85c-5615-a3bd-089a25a22bf1"
+      ]
+    },
+    {
+      "id": "leather_bag",
+      "role": "bag",
+      "query": "Черная сумка из кожи теленка",
+      "expected_product_ids": [
+        "3776935b-7738-571a-9247-3eee5c48ee96"
+      ]
+    }
+  ]
+}

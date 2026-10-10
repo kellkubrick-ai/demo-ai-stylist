@@ -111,6 +111,7 @@ class FeedMapping(Schema):
     fields: dict[str, str]
     grouping: Literal["visual_id", "model_color"]
     active_groups_only: bool = False
+    required_visibility: str | None = None
     category_paths: list[str] = Field(min_length=1)
     image_paths: list[str] = Field(min_length=1)
     availability: AvailabilityRule
@@ -152,6 +153,12 @@ class FeedMapping(Schema):
     def assert_verified(self) -> None:
         if not self.verified:
             raise ValueError("Feed mapping is not verified against raw XML; import refused")
+
+    def offer_in_scope(self, element) -> bool:
+        return self.availability.evaluate(element) and (
+            self.required_visibility is None
+            or scalar(element, "param[@code='visibility']") == self.required_visibility
+        )
 
     def category(self, element) -> CatalogCategory:
         external = scalar(element, self.category_fields["id"])
