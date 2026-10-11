@@ -1,6 +1,6 @@
 import io
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from aiogram.types import BufferedInputFile
 from PIL import Image
@@ -73,6 +73,55 @@ async def test_search_status_is_sent_when_pipeline_starts_search():
     assert event.answer.await_count == 2
     assert "🔎 Ищу подходящие товары" in event.answer.call_args_list[0].args[0]
     assert event.answer.call_args_list[1].args[0] == "Готово"
+
+
+async def test_conversational_reply_is_decided_by_pipeline():
+    history = [
+        {"role": "user", "content": "Подбери образ"},
+        {"role": "assistant", "content": "Подобрала три образа."},
+    ]
+    pipeline = AsyncMock()
+    pipeline.repository.find_session.return_value = {
+        "id": "session",
+        "dialogue_history": history,
+    }
+    pipeline.run.return_value = PipelineResult(
+        run_id="run",
+        response=StylingResponse(message="Рада, что образы понравились!"),
+    )
+    event = message("Мне всё нравится, спасибо!")
+
+    await make_router(pipeline).message.handlers[-1].callback(event)
+
+    pipeline.run.assert_awaited_once()
+    event.answer.assert_awaited_once()
+    assert event.answer.call_args.args[0] == "Рада, что образы понравились!"
+    updated_history = pipeline.repository.update_session.call_args.kwargs[
+        "dialogue_history"
+    ]
+    assert updated_history[-2] == {"role": "user", "content": event.text}
+    assert updated_history[-1] == {
+        "role": "assistant",
+        "content": "Рада, что образы понравились!",
+    }
+
+
+async def test_completed_looks_are_saved_for_follow_up_context(records, styling_result):
+    result = PipelineResult(
+        run_id="run",
+        response=StylingResponse(message="Подобрала образ.", looks=styling_result.looks),
+        cards=catalog_cards(styling_result.looks, records),
+    )
+    pipeline = AsyncMock()
+    pipeline.repository.find_session.return_value = {"id": "session", "dialogue_history": []}
+    pipeline.run.return_value = result
+
+    with patch("ai_stylist.bot.handlers.show_result", new_callable=AsyncMock):
+        await make_router(pipeline).message.handlers[-1].callback(message("Подбери образ"))
+
+    history = pipeline.repository.update_session.call_args.kwargs["dialogue_history"]
+    assert result.cards[0].items[0].title in history[-1]["content"]
+    assert result.cards[0].items[0].product_url in history[-1]["content"]
 
 
 async def test_catalog_cards_include_actual_links_prices_and_photos(records, styling_result):

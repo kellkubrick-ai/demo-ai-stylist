@@ -70,9 +70,18 @@ class OutfitPlan(Schema):
 class StylingUnderstanding(Schema):
     intent: StylingIntent
     outfit_plan: OutfitPlan
+    dialogue_reply: str | None = None
 
     @model_validator(mode="after")
     def require_plan(self) -> Self:
-        if not self.intent.needs_clarification and not self.outfit_plan.compositions:
+        if self.dialogue_reply is not None:
+            if not self.dialogue_reply.strip():
+                raise ValueError("Dialogue reply must be nonempty")
+            if self.intent.needs_clarification or self.outfit_plan.compositions:
+                raise ValueError("Dialogue reply cannot request clarification or search")
+        elif self.intent.needs_clarification:
+            if self.outfit_plan.compositions:
+                raise ValueError("Clarification requires an empty outfit plan")
+        elif not self.outfit_plan.compositions:
             raise ValueError("A meaningful request requires at least one composition")
         return self

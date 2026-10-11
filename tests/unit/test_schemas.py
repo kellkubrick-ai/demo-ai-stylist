@@ -33,6 +33,21 @@ def test_clarification_and_plan_are_consistent():
     assert result.intent.needs_clarification
 
 
+def test_dialogue_reply_is_distinct_from_clarification_and_search(plan):
+    reply = StylingUnderstanding(
+        intent=StylingIntent(),
+        outfit_plan=OutfitPlan(),
+        dialogue_reply="Рада, что понравилось!",
+    )
+    assert reply.dialogue_reply
+    with pytest.raises(ValidationError):
+        StylingUnderstanding(
+            intent=StylingIntent(),
+            outfit_plan=plan,
+            dialogue_reply="Рада, что понравилось!",
+        )
+
+
 @pytest.mark.parametrize(
     "roles",
     [

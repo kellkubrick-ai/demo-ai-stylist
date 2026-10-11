@@ -160,15 +160,25 @@ class StylingPipeline:
                 current_step,
                 step_started,
                 needs_clarification=intent.needs_clarification,
+                has_dialogue_reply=understanding.dialogue_reply is not None,
                 composition_count=len(plan.compositions),
             )
-            if session_id:
+            if session_id and understanding.dialogue_reply is None:
                 await self.repository.update_session(
                     session_id,
                     current_intent=log["intent_json"],
                     current_outfit_plan=log["outfit_plan_json"],
                 )
-            if intent.needs_clarification:
+            if understanding.dialogue_reply is not None:
+                current_step = "dialogue_reply"
+                step_started = start_trace_step(log, current_step)
+                log["result_json"] = {"dialogue_reply": understanding.dialogue_reply}
+                result = PipelineResult(
+                    run_id=run_id,
+                    response=StylingResponse(message=understanding.dialogue_reply),
+                )
+                finish_trace_step(log, current_step, step_started)
+            elif intent.needs_clarification:
                 current_step = "clarification"
                 step_started = start_trace_step(log, current_step)
                 result = PipelineResult(

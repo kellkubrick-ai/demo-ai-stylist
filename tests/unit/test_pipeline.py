@@ -44,6 +44,35 @@ async def test_clarification_stops_before_retrieval():
     assert "error" not in repository.save_run.call_args.args[0]
 
 
+async def test_dialogue_reply_uses_history_without_starting_search():
+    repository, intent, retriever, stylist, response, renderer = mocks()
+    search_started = AsyncMock()
+    intent.understand.return_value = StylingUnderstanding(
+        intent=StylingIntent(),
+        outfit_plan=OutfitPlan(),
+        dialogue_reply="Рада, что образы понравились!",
+    )
+    dialogue = [
+        {"role": "user", "content": "Подбери образ"},
+        {"role": "assistant", "content": "Подобрала три образа."},
+        {"role": "user", "content": "супер"},
+    ]
+
+    result = await StylingPipeline(repository, intent, retriever, stylist, response, renderer).run(
+        dialogue, session_id="session", on_search_start=search_started
+    )
+
+    assert result.response.message == "Рада, что образы понравились!"
+    assert not result.failed and not result.cards
+    intent.understand.assert_awaited_once_with(dialogue)
+    search_started.assert_not_awaited()
+    retriever.retrieve.assert_not_awaited()
+    repository.update_session.assert_not_awaited()
+    log = repository.save_run.call_args.args[0]
+    assert log["result_json"] == {"dialogue_reply": result.response.message}
+    assert any(step["step"] == "dialogue_reply" for step in log["metrics"]["trace"])
+
+
 async def test_empty_pool_is_normal_and_skips_stylist(plan):
     repository, intent, retriever, stylist, response, renderer = mocks()
     search_started = AsyncMock()

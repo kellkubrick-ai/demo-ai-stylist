@@ -276,9 +276,7 @@ def make_router(pipeline):
         result = await pipeline.run(
             history, session_id=session["id"], on_search_start=on_search_start
         )
-        reply = result.response.message
-        if result.response.follow_up_question:
-            reply += "\n" + result.response.follow_up_question
+        reply, _, _ = result_text(result, include_explanations=False)
         history = [*history, {"role": "assistant", "content": reply}]
         await repository.update_session(session["id"], dialogue_history=history)
         await show_result(message, result, pipeline.stylist.images)
