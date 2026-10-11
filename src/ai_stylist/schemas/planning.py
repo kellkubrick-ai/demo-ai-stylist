@@ -33,6 +33,7 @@ class OutfitSlot(Schema):
 
 class OutfitComposition(Schema):
     plan_id: str = Field(min_length=1)
+    anchor_focused: bool = False
     slots: list[OutfitSlot] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -41,9 +42,13 @@ class OutfitComposition(Schema):
         if len(roles) != len(set(roles)):
             raise ValueError("Roles must be unique in a composition")
         required = {slot.role for slot in self.slots if slot.required}
-        bases = ({"top", "bottom", "shoes"}, {"dress", "shoes"}, {"set", "shoes"})
-        if not any(base <= required for base in bases):
-            raise ValueError("Composition requires a complete base and shoes")
+        if self.anchor_focused:
+            if not required:
+                raise ValueError("Anchor-focused composition requires a required anchor role")
+        else:
+            bases = ({"top", "bottom", "shoes"}, {"dress", "shoes"}, {"set", "shoes"})
+            if not any(base <= required for base in bases):
+                raise ValueError("Composition requires a complete base and shoes")
         if ("dress" in roles or "set" in roles) and ({"top", "bottom"} & set(roles)):
             raise ValueError("Do not combine a one-piece base with separate top/bottom slots")
         if "dress" in roles and "set" in roles:

@@ -56,10 +56,11 @@ def test_duplicate_plan_ids_are_rejected(plan):
         OutfitPlan(compositions=plan.compositions * 2)
 
 
-def test_reduced_results_need_limitations():
+def test_empty_results_need_limitations_but_one_look_does_not(styling_result):
     with pytest.raises(ValidationError):
         VLMStylingResponse()
     assert VLMStylingResponse(limitations=["Пул не содержит обуви."]).looks == []
+    assert VLMStylingResponse(looks=styling_result.looks).limitations == []
 
 
 def test_scores_cannot_be_nan_or_out_of_range():

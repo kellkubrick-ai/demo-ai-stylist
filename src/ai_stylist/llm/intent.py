@@ -1,5 +1,5 @@
 from ai_stylist.schemas.intent import ROLES
-from ai_stylist.schemas.planning import PRODUCT_TYPES, ROLE_TYPES
+from ai_stylist.schemas.planning import ROLE_TYPES
 
 
 class IntentService:
@@ -22,8 +22,6 @@ class IntentService:
             },
         )
         self.last_usage = usage_dict(result)
-        if not set(result.output.intent.product_types) <= set(PRODUCT_TYPES):
-            raise ValueError("Intent model returned unknown normalized product types")
         return result.output
 
 

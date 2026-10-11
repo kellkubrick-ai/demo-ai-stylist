@@ -1,8 +1,14 @@
+import json
+import logging
 import time
+from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 from pydantic import Field
+from pydantic_ai import capture_run_messages
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 
 from ai_stylist.retriever.service import covered_plan
 from ai_stylist.schemas.base import Schema
@@ -10,6 +16,28 @@ from ai_stylist.schemas.retrieval import RetrievalRequest
 from ai_stylist.schemas.styling import ResponseRequest, StylingResponse, VLMStylingResponse
 from ai_stylist.stylist.service import build_styling_request
 from ai_stylist.stylist.validation import validate_styling
+
+logger = logging.getLogger(__name__)
+
+
+def start_trace_step(log, step):
+    started = time.monotonic()
+    log["metrics"]["trace"].append(
+        {"step": step, "status": "started", "at": datetime.now(UTC).isoformat()}
+    )
+    return started
+
+
+def finish_trace_step(log, step, started, status="completed", **details):
+    log["metrics"]["trace"].append(
+        {
+            "step": step,
+            "status": status,
+            "at": datetime.now(UTC).isoformat(),
+            "duration_seconds": round(time.monotonic() - started, 3),
+            **details,
+        }
+    )
 
 
 class ProductCard(Schema):
@@ -76,7 +104,17 @@ def catalog_cards(looks, catalog):
 
 
 class StylingPipeline:
-    def __init__(self, repository, intent, retriever, stylist, response, renderer, max_products=30):
+    def __init__(
+        self,
+        repository,
+        intent,
+        retriever,
+        stylist,
+        response,
+        renderer,
+        max_products=30,
+        trace_dir: Path | None = None,
+    ):
         self.repository = repository
         self.intent = intent
         self.retriever = retriever
@@ -84,8 +122,11 @@ class StylingPipeline:
         self.response = response
         self.renderer = renderer
         self.max_products = max_products
+        self.trace_dir = trace_dir
 
-    async def run(self, dialogue: list[dict], *, session_id=None) -> PipelineResult:
+    async def run(
+        self, dialogue: list[dict], *, session_id=None, on_search_start=None
+    ) -> PipelineResult:
         run_id = str(uuid4())
         started = time.monotonic()
         log = {
@@ -95,16 +136,32 @@ class StylingPipeline:
             "catalog_version": await self.repository.version(),
             "intent_json": {},
             "outfit_plan_json": {},
-            "metrics": {},
+            "metrics": {"dialogue": dialogue, "trace": []},
         }
+        current_step = "intent_planning"
+        step_started = start_trace_step(log, current_step)
         try:
-            understanding = await self.intent.understand(dialogue)
+            with capture_run_messages() as intent_messages:
+                try:
+                    understanding = await self.intent.understand(dialogue)
+                except Exception:
+                    log["metrics"]["intent_model_messages"] = (
+                        ModelMessagesTypeAdapter.dump_python(intent_messages, mode="json")
+                    )
+                    raise
             intent, plan = understanding.intent, understanding.outfit_plan
             log.update(
                 intent_json=intent.model_dump(mode="json"),
                 outfit_plan_json=plan.model_dump(mode="json"),
             )
             log["metrics"]["intent"] = self.intent.last_usage
+            finish_trace_step(
+                log,
+                current_step,
+                step_started,
+                needs_clarification=intent.needs_clarification,
+                composition_count=len(plan.compositions),
+            )
             if session_id:
                 await self.repository.update_session(
                     session_id,
@@ -112,12 +169,19 @@ class StylingPipeline:
                     current_outfit_plan=log["outfit_plan_json"],
                 )
             if intent.needs_clarification:
+                current_step = "clarification"
+                step_started = start_trace_step(log, current_step)
                 result = PipelineResult(
                     run_id=run_id,
                     clarification=True,
                     response=StylingResponse(message=intent.clarification_question),
                 )
+                finish_trace_step(log, current_step, step_started)
             else:
+                current_step = "retrieval"
+                step_started = start_trace_step(log, current_step)
+                if on_search_start is not None:
+                    await on_search_start()
                 pool = await self.retriever.retrieve(
                     RetrievalRequest(
                         intent=intent,
@@ -127,15 +191,57 @@ class StylingPipeline:
                 )
                 log["metrics"]["retrieval"] = self.retriever.last_usage
                 log["metrics"]["candidate_pool"] = pool.model_dump(mode="json")
+                finish_trace_step(
+                    log,
+                    current_step,
+                    step_started,
+                    candidate_count=len(pool.products),
+                    missing_required_slots=[
+                        missing.model_dump(mode="json")
+                        for missing in pool.missing_required_slots
+                    ],
+                )
+                current_step = "plan_coverage"
+                step_started = start_trace_step(log, current_step)
                 viable = covered_plan(pool, plan, intent)
+                finish_trace_step(
+                    log,
+                    current_step,
+                    step_started,
+                    viable_plan_ids=[
+                        composition.plan_id for composition in viable.compositions
+                    ],
+                )
                 if not viable.compositions:
-                    roles = ", ".join(f"{m.plan_id}: {m.slot}" for m in pool.missing_required_slots)
-                    limitation = "В найденном наборе не хватает товаров для полного образа"
+                    current_step = "styling_skipped"
+                    step_started = start_trace_step(log, current_step)
+                    role_labels = {
+                        "top": "верха",
+                        "bottom": "низа",
+                        "dress": "платья или комбинезона",
+                        "set": "комплекта",
+                        "outer_layer": "верхнего слоя",
+                        "shoes": "обуви",
+                        "bag": "сумки",
+                        "accessory": "аксессуаров",
+                    }
+                    roles = ", ".join(
+                        dict.fromkeys(
+                            role_labels[missing.slot]
+                            for missing in pool.missing_required_slots
+                        )
+                    )
+                    limitation = "Не удалось собрать полный образ"
                     if roles:
-                        limitation += f" ({roles})"
+                        limitation += f": в каталоге не нашлись подходящие товары для {roles}"
                     styled = VLMStylingResponse(limitations=[limitation + "."])
                     catalog = []
+                    finish_trace_step(
+                        log, current_step, step_started, reason="No viable required-role coverage"
+                    )
                 else:
+                    current_step = "styling_and_validation"
+                    step_started = start_trace_step(log, current_step)
                     request = build_styling_request(intent, plan, pool, self.renderer.knowledge())
                     log["vlm_request_json"] = request.model_dump(mode="json")
                     styled = await self.stylist.style(request)
@@ -145,7 +251,16 @@ class StylingPipeline:
                         usable_images_only=True,
                     )
                     validate_styling(request, styled, catalog)
+                    finish_trace_step(
+                        log,
+                        current_step,
+                        step_started,
+                        candidate_count=len(request.products),
+                        validated_look_count=len(styled.looks),
+                    )
                 log["result_json"] = styled.model_dump(mode="json")
+                current_step = "response_rewrite"
+                step_started = start_trace_step(log, current_step)
                 rewritten = await self.response.respond(
                     ResponseRequest(
                         intent=intent,
@@ -153,8 +268,18 @@ class StylingPipeline:
                     )
                 )
                 log["metrics"]["response"] = self.response.last_usage
+                finish_trace_step(
+                    log,
+                    current_step,
+                    step_started,
+                    look_count=len(rewritten.looks),
+                    has_follow_up=bool(rewritten.follow_up_question),
+                )
+                current_step = "catalog_version_check"
+                step_started = start_trace_step(log, current_step)
                 if await self.repository.version() != log["catalog_version"]:
                     raise ValueError("Catalog version changed during styling; rerun the request")
+                finish_trace_step(log, current_step, step_started)
                 result = PipelineResult(
                     run_id=run_id,
                     response=rewritten,
@@ -162,6 +287,13 @@ class StylingPipeline:
                 )
         except Exception as exc:
             log["error"] = type(exc).__name__ + ": " + str(exc)
+            finish_trace_step(
+                log,
+                current_step,
+                step_started,
+                status="failed",
+                error=log["error"],
+            )
             result = PipelineResult(
                 run_id=run_id,
                 failed=True,
@@ -182,5 +314,16 @@ class StylingPipeline:
             if not result.failed and stage_costs and all(cost is not None for cost in stage_costs)
             else None
         )
+        if self.trace_dir:
+            trace_path = self.trace_dir / f"{run_id}.json"
+            log["metrics"]["trace_file"] = str(trace_path)
+            try:
+                trace_path.parent.mkdir(parents=True, exist_ok=True)
+                trace_path.write_text(
+                    json.dumps(log, ensure_ascii=False, indent=2, default=str) + "\n",
+                    encoding="utf-8",
+                )
+            except OSError:
+                logger.exception("Could not write styling trace to %s", trace_path)
         await self.repository.save_run(log)
         return result

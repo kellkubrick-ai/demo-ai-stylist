@@ -30,7 +30,6 @@ class StylingIntent(Schema):
     occasion: str | None = None
     styles: list[str] = Field(default_factory=list)
     formality: str | None = None
-    product_types: list[str] = Field(default_factory=list)
     colors: list[str] = Field(default_factory=list)
     budget: StylingBudget | None = None
     sizes_by_role: dict[OutfitRole, list[str]] = Field(default_factory=dict)

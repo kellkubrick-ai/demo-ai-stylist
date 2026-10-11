@@ -122,6 +122,11 @@ section contains the complete model instructions, normalized product input, clic
 previews, structured model output, usage and errors. Pass a `.jsonl` path to `--report` when a
 machine-readable trace is preferable. Add `--log-console` to also print each record as JSON while the
 command runs. API keys and binary image data are never logged.
+Each styling run writes a JSON trace to `data/logs/styling/<run_id>.json`. It contains the dialogue,
+intent and outfit plan, retrieved candidates, model results, errors, and a timestamped step timeline.
+Failed intent runs also include `metrics.intent_model_messages` with the model reply and retry feedback.
+The dialogue and timeline are also stored in `styling_runs.metrics`; other run details remain in their
+respective columns in the database.
 Embedding input is a short product description assembled from catalog facts and available visual
 enrichment, without JSON field names or empty values. Changing this text format does not update
 previously saved vectors; `uv run ai-stylist embeddings --force` rebuilds them with API calls.
@@ -189,10 +194,13 @@ uv run ai-stylist bot
 docker compose --profile bot up -d --build bot
 ```
 
-Commands: `/start`, `/stylist`, `/finish`, `/reset`. Buttons also enter, finish and reset styling.
+Commands: `/start`, `/stylist`, `/finish`, `/reset`. The active-session keyboard has one button,
+`Новый подбор`, which starts a fresh dialogue; continue typing to refine the current one.
 Sessions and dialogue live in PostgreSQL. Messages from the same user are serialized so concurrent
-updates cannot overwrite dialogue. The bot shows real product photos, URLs, offer sizes/prices and
-application-computed totals. Core services do not depend on Telegram objects.
+updates cannot overwrite dialogue. The bot sends one numbered collage with product names, prices,
+clickable catalog links and application-computed totals below it. If the result exceeds Telegram's
+photo-caption limit, it sends one text message with the product details and links. Core services do
+not depend on Telegram objects.
 
 ## Verification
 

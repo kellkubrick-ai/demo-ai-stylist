@@ -1,7 +1,7 @@
 {
   "name": "12storeez-demo-100",
   "source_feed_sha256": "8bf7f37d388c8a15955d53ac61b59579e548e15d45a9e94957aee8afa405415f",
-  "catalog_version": "465a94233197dc7260c7cd8bdd55bfedfec6d91e7bb0d10ed9c3e559fa3d69ff",
+  "catalog_version": "248fd1381de9ce6032be31536a06e4020b6c260ac29429492d8a6cfa7e38f3f4",
   "audience": "женский",
   "existing_enrichment_model": "openai/gpt-6-luna",
   "selection_criteria": ["100 visual product groups, not individual size offers","Only available=true and visibility=all offers, previously verified usable photo and stored VLM enrichment","Coverage across complete outfit roles, clothing/shoe sizes, colors, price bands and silhouettes","A small number of challenging subtypes for retrieval evaluation"],

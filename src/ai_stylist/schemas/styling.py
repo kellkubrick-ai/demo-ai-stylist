@@ -70,8 +70,8 @@ class VLMStylingResponse(Schema):
 
     @model_validator(mode="after")
     def require_limitations(self) -> Self:
-        if len(self.looks) < 2 and not any(s.strip() for s in self.limitations):
-            raise ValueError("Fewer than two looks require a grounded limitation")
+        if not self.looks and not any(s.strip() for s in self.limitations):
+            raise ValueError("No looks require a grounded limitation")
         return self
 
 

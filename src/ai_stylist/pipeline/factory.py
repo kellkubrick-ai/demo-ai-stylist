@@ -56,6 +56,7 @@ async def runtime(settings):
                 ResponseService(response_agent),
                 renderer,
                 max_products=settings.max_candidates,
+                trace_dir=settings.data_dir / "logs" / "styling",
             )
             yield pipeline
     finally:

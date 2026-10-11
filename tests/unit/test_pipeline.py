@@ -27,14 +27,17 @@ def mocks():
 
 async def test_clarification_stops_before_retrieval():
     repository, intent, retriever, stylist, response, renderer = mocks()
+    search_started = AsyncMock()
     intent.understand.return_value = StylingUnderstanding(
         intent=StylingIntent(needs_clarification=True, clarification_question="Какой повод?"),
         outfit_plan=OutfitPlan(),
     )
     result = await StylingPipeline(repository, intent, retriever, stylist, response, renderer).run(
         [{"role": "user", "content": "Хочу образ"}],
+        on_search_start=search_started,
     )
     assert result.clarification and not result.failed
+    search_started.assert_not_awaited()
     retriever.retrieve.assert_not_awaited()
     stylist.style.assert_not_awaited()
     response.respond.assert_not_awaited()
@@ -43,6 +46,7 @@ async def test_clarification_stops_before_retrieval():
 
 async def test_empty_pool_is_normal_and_skips_stylist(plan):
     repository, intent, retriever, stylist, response, renderer = mocks()
+    search_started = AsyncMock()
     intent.understand.return_value = StylingUnderstanding(intent=StylingIntent(), outfit_plan=plan)
     retriever.retrieve.return_value = CandidatePool()
     response.respond.side_effect = lambda request: StylingResponse(
@@ -52,8 +56,10 @@ async def test_empty_pool_is_normal_and_skips_stylist(plan):
     )
     result = await StylingPipeline(repository, intent, retriever, stylist, response, renderer).run(
         [{"role": "user", "content": "Образ на ужин"}],
+        on_search_start=search_started,
     )
     assert not result.failed and not result.cards
+    search_started.assert_awaited_once()
     stylist.style.assert_not_awaited()
     log = repository.save_run.call_args.args[0]
     assert log["result_json"]["limitations"] and "error" not in log
