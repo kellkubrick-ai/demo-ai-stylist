@@ -158,6 +158,51 @@ snapshot files are not overwritten. Restore requires an empty catalog and matchi
 uv run ai-stylist restore data/catalog-snapshot.jsonl
 ```
 
+## Workflow overview
+
+Catalog preparation is an offline flow. Runtime styling uses only the prepared catalog:
+
+```mermaid
+flowchart TD
+  subgraph Offline[Offline catalog preparation]
+    Feed[Product feed] --> Import[Map and import product groups, offers, categories and photo URLs]
+    Import --> Catalog[(PostgreSQL catalog)]
+    Catalog --> Enrich[Pydantic AI enrichment agent]
+    Enrich --> Enriched[(Catalog plus visual enrichment)]
+    Enriched --> Embed[EmbeddingClient creates product-text vectors]
+    Embed --> Ready[(Prepared catalog and pgvector embeddings)]
+  end
+
+  subgraph Runtime[User styling request]
+    User[Telegram or CLI request] --> Session[Load dialogue/session]
+    Session --> Intent[Pydantic AI intent and outfit planning]
+    Intent --> Decision{Reply or clarification only?}
+    Decision -- Yes --> Direct[Return reply or clarification]
+    Decision -- No --> Retrieval[Per-role retrieval: query embeddings, hard SQL filters, vector ranking]
+    Ready --> Retrieval
+    Retrieval --> Pool[Allocate bounded candidate pool; reserve required-role coverage]
+    Pool --> Coverage{Complete required roles available?}
+    Coverage -- No --> Limit[Skip stylist and describe missing roles]
+    Coverage -- Yes --> Stylist[Pydantic AI stylist receives candidates and public photo URLs]
+    Stylist --> Provider[OpenRouter/model provider fetches image URLs and returns structured looks]
+    Provider --> Validate[Validate selected products, offers and constraints]
+    Limit --> Response[Pydantic AI response agent]
+    Validate --> Response
+    Response --> Version{Catalog version unchanged?}
+    Version -- Yes --> Result[Build product cards and totals]
+    Version -- No --> Failure[Return failure and record the run]
+    Direct --> Persist[Persist session/run trace]
+    Result --> Persist
+    Failure --> Persist
+    Persist --> Output[Reply in Telegram or CLI]
+  end
+```
+
+Intent, enrichment, stylist and response agents use Pydantic AI with typed schemas. Retrieval embeddings
+use the dedicated `EmbeddingClient` against OpenRouter's embeddings endpoint. Runtime product photos
+are sent as public URL image inputs for the provider to fetch; Telegram separately fetches product
+images when rendering the result collage.
+
 ## Run and evaluate styling
 
 ```powershell

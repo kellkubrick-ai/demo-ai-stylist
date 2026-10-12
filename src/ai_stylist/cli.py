@@ -112,13 +112,13 @@ def feed_path(source: str, settings: Settings) -> Path:
         raise
 
 
-def load_selection(path: Path) -> tuple[str, set[str]]:
+def load_selection(path: Path) -> tuple[str | None, set[str]]:
     manifest = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("items"), list):
         raise ValueError("Selection must contain an items list")
     version = manifest.get("catalog_version")
-    if not isinstance(version, str) or not version:
-        raise ValueError("Selection requires a catalog_version")
+    if version is not None and (not isinstance(version, str) or not version):
+        raise ValueError("Selection catalog_version must be a non-empty string")
     ids = [item.get("product_id") for item in manifest["items"] if isinstance(item, dict)]
     if not ids or len(ids) != len(manifest["items"]):
         raise ValueError("Selection requires product IDs")
@@ -186,7 +186,7 @@ async def execute(args, settings, source_path=None):
         product_ids = None
         if args.selection:
             version, product_ids = load_selection(args.selection)
-            if version != await repository.version():
+            if version is not None and version != await repository.version():
                 raise ValueError("Selection catalog_version does not match the current catalog")
             existing = await repository.get_products(list(product_ids))
             if {record.product.id for record in existing} != product_ids:

@@ -25,7 +25,33 @@ def test_enrichment_can_log_model_io_to_console():
 
 def test_demo_selection_has_100_unique_product_groups():
     version, ids = load_selection(Path("evals/catalog/demo-100.json"))
-    assert version and len(ids) == 100
+    assert version is None and len(ids) == 100
+
+
+def test_selection_catalog_version_is_optional(tmp_path):
+    path = tmp_path / "selection.json"
+    path.write_text(
+        json.dumps({"items": [{"product_id": "0cabf0a2-4610-56ea-951c-65ec7046ea33"}]}),
+        encoding="utf-8",
+    )
+    version, ids = load_selection(path)
+    assert version is None
+    assert ids == {"0cabf0a2-4610-56ea-951c-65ec7046ea33"}
+
+
+def test_selection_keeps_optional_catalog_version(tmp_path):
+    path = tmp_path / "selection.json"
+    path.write_text(
+        json.dumps(
+            {
+                "catalog_version": "v1",
+                "items": [{"product_id": "0cabf0a2-4610-56ea-951c-65ec7046ea33"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    version, _ = load_selection(path)
+    assert version == "v1"
 
 
 def test_demo_search_probes_reference_selected_products():
