@@ -64,7 +64,10 @@ class StylistService:
         self.last_usage = {}
 
     async def style(self, request):
-        content = [request.model_dump_json(), *await self.images.attach(request.products)]
+        content = [request.model_dump_json()]
+        for product in request.products:
+            _, image_content = await self.images.select(product.product_id, product.image_urls)
+            content.extend(image_content)
         result = await self.agent.run(
             content,
             deps={

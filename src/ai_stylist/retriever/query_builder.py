@@ -21,10 +21,6 @@ def product_matches(product: ProductGroup, intent: StylingIntent, slot: OutfitSl
         return False
     if slot.role == "set" and product.catalog_attributes.get("bundle_confirmed") is not True:
         return False
-    if intent.colors and normalize(product.color or "") not in {
-        normalize(c) for c in intent.colors
-    }:
-        return False
     audience = intent.user_context.get("audience")
     if audience and normalize(str(product.catalog_attributes.get("audience", ""))) != normalize(
         audience
@@ -65,8 +61,6 @@ def slot_filters(intent: StylingIntent, slot: OutfitSlot):
     conditions = [product.c.product_type.in_(allowed_types(slot))]
     if slot.role == "set":
         conditions.append(product.c.catalog_attributes["bundle_confirmed"].as_boolean() == true())
-    if intent.colors:
-        conditions.append(sql_normalize(product.c.color).in_([normalize(c) for c in intent.colors]))
     if audience := intent.user_context.get("audience"):
         conditions.append(
             sql_normalize(product.c.catalog_attributes["audience"].as_string())

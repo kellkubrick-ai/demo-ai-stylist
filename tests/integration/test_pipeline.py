@@ -74,7 +74,7 @@ async def test_two_complete_looks_end_to_end(repository, mapping, records, plan,
             },
         ),
     )
-    image_requests = []
+    image_downloads = []
 
     def transport(request):
         if request.method == "POST":
@@ -85,7 +85,7 @@ async def test_two_complete_looks_end_to_end(repository, mapping, records, plan,
                     "usage": {"total_tokens": 3, "cost": 0.001},
                 },
             )
-        image_requests.append(str(request.url))
+        image_downloads.append(str(request.url))
         data = BytesIO()
         color = "beige" if "beige" in str(request.url) else "black"
         Image.new("RGB", (2, 2), color).save(data, format="PNG")
@@ -107,7 +107,7 @@ async def test_two_complete_looks_end_to_end(repository, mapping, records, plan,
     assert len(result.response.looks) == 2 and len(result.cards) == 2
     assert str(result.cards[0].total) == "600.60"
     assert str(result.cards[1].total) == "620.50"
-    assert image_requests
+    assert not image_downloads
     logged = await repository.get_run(result.run_id)
     assert logged["error"] is None
     assert logged["metrics"]["intent"]["requests"] == 1

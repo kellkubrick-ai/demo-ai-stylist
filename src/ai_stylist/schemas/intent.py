@@ -30,10 +30,23 @@ class StylingIntent(Schema):
     occasion: str | None = None
     styles: list[str] = Field(default_factory=list)
     formality: str | None = None
-    colors: list[str] = Field(default_factory=list)
+    colors: list[str] = Field(
+        default_factory=list,
+        description=(
+            "User's natural-language color and shade requests. These are visual criteria, "
+            "not necessarily exact catalog color labels."
+        ),
+    )
     budget: StylingBudget | None = None
     sizes_by_role: dict[OutfitRole, list[str]] = Field(default_factory=dict)
     user_context: dict[str, str] = Field(default_factory=dict)
+    visual_requirements: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit user requirements that SQL cannot verify and the stylist must check "
+            "against product photos or trusted catalog facts."
+        ),
+    )
     fit_preferences: list[str] = Field(default_factory=list)
     figure_preferences: list[str] = Field(default_factory=list)
     avoid: list[str] = Field(default_factory=list)

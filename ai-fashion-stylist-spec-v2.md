@@ -600,8 +600,12 @@ Invariant:
 
 ## 7.1 Input
 
-Full or recent dialogue history, supported outfit roles, and the normalized product-type vocabulary.
+Full or recent dialogue history, supported outfit roles, normalized product-type vocabulary, known
+source audiences, and a compact search contract describing catalog fields and enforcement rules.
 The LLM extracts intent and plans compositions in one call; it does not receive the full catalog.
+Product groups expose normalized `product_type`, free-text source `color`, source categories,
+verified `catalog_attributes`, and photos. Offers expose availability, size, price and currency.
+The model must not treat free-text color labels as a closed vocabulary.
 
 ## 7.2 Output
 
@@ -627,7 +631,8 @@ class StylingIntent(BaseModel):
     formality: str | None = None
 
     product_types: list[str] = Field(default_factory=list)
-    colors: list[str] = Field(default_factory=list)
+    colors: list[str] = Field(default_factory=list)  # Natural-language visual color criteria
+    visual_requirements: list[str] = Field(default_factory=list)
 
     budget: StylingBudget | None = None
     sizes_by_role: dict[OutfitRole, list[str]] = Field(default_factory=dict)
@@ -648,6 +653,11 @@ Use the budget currency consistently; do not perform implicit currency conversio
 do not assume that the same size label fits all roles or brands.
 `user_context` contains only explicitly supplied facts, such as height with its unit.
 If the budget scope or size mapping is materially ambiguous, ask for clarification.
+`visual_requirements` preserves explicit user requirements that cannot be checked against authoritative
+catalog fields, such as "светлые брюки", "без высокого каблука", or suitability for a forest walk.
+The intent model also keeps these terms in the relevant retrieval query. Styles and non-mandatory
+preferences guide ranking; the stylist checks visual requirements against photos and trusted facts.
+Wording such as "желательно" or "по возможности" marks a preference, not a requirement.
 
 Examples of useful explicit preferences:
 
@@ -761,18 +771,25 @@ class CandidatePool(BaseModel):
 
 ## 8.3 Hard filters
 
-Must be applied before VLM styling where relevant:
+Apply hard SQL filters before VLM styling only when the matching fact is available and authoritative:
 
 - available;
 - item budget bounds and currency;
 - size for the applicable outfit role;
 - explicit exclusions supported by authoritative catalog attributes;
-- normalized product-type constraints and requested colors from the catalog.
+- explicitly requested normalized product-type constraints;
+- explicitly requested audience when it matches a known source audience;
+- confirmed bundle status for sets.
 
-Stock, sizes, and prices are checked on offers. Product type, color, and other supplied facts are checked
-on the corresponding visual product. Stored enrichment can guide ranking, but is not authoritative
-proof of a hard constraint. Preferences requiring visual judgment are checked by the VLM using the photos.
-An outfit budget can exclude an individually unaffordable offer before styling; its final sum is checked after composition.
+Stock, sizes, and prices are checked on offers. Product type and audience are checked on the visual
+product. The source color is free text, so user color language must not be compared to it by exact
+string equality. Colors, shade, style, occasion, fit, figure, and visual exclusions guide semantic
+retrieval; `visual_requirements` tells the VLM which visual conditions are mandatory. It checks them
+against photos and trusted source facts.
+If a required visual property cannot be verified, the VLM must not claim it is satisfied. Stored
+enrichment can guide ranking but is not authoritative proof of stock, size, price, material, or
+construction. An outfit budget can exclude an individually unaffordable offer before styling; its
+final sum is checked after composition.
 
 ## 8.4 Retrieval responsibility
 
@@ -791,17 +808,18 @@ compositions retain coverage. The configured limit applies to the entire pool, n
 Target pool:
 
 ```text
-20–30 products total
+12–16 products total
 ```
 
+Reserve required-role coverage first, then distribute remaining candidates round-robin across
+required roles before optional roles. Aim for about 3–4 candidates per required role when available.
 Example:
 
 ```text
-6 tops
-6 bottoms
-5 dresses
-5 shoes
-4 bags/accessories
+4 tops
+4 bottoms
+4 shoes
+up to 4 optional alternatives
 ```
 
 Exact distribution may depend on the request.
@@ -939,12 +957,15 @@ The VLM receives:
 - stylist rules and compatibility rubric.
 
 The VLM does **not** receive the full catalog.
+For runtime styling, send public exact-variant photo URLs as image inputs and let the model provider
+fetch them; the application does not download or inline the image bytes. URLs must be publicly
+reachable by the provider.
 
 Recommended input size:
-- ~20–30 candidate products;
+- ~12–16 candidate products;
 - 1–2 images per product.
 
-The 20–30 limit counts visual variants across all slots and compositions, not size SKUs.
+The 12–16 limit counts visual variants across all slots and compositions, not size SKUs.
 If provider limits make this too large, reduce the candidate pool before the VLM call while preserving
 required-role coverage. Recompute coverage limitations after reducing the pool.
 Embeddings, feed technical IDs, commercial SKU strings, and Telegram user IDs are not needed by the stylist.

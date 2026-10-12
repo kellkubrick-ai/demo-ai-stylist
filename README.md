@@ -110,10 +110,10 @@ uv run ai-stylist snapshot --output data/catalog-snapshot.jsonl
 
 Suitable products have a normalized garment type, available offers and exact-variant photo URLs.
 Enrichment sends up to two labeled public image URLs for one product per model request. A successful
-model response marks those URLs usable for runtime retrieval. Stylist requests still validate and
-attach image bytes locally. Before sending them to the stylist, images are resized and JPEG-encoded
-to at most 400 KB each, keeping the maximum 30-product, two-photo request below Gemini's 30 MB image
-payload limit. Inaccessible images are reported explicitly.
+model response marks those URLs usable for runtime retrieval. Stylist requests send selected public
+image URLs as image inputs; the provider fetches the images. The application does not download or
+resize them for the stylist request. Up to two images are sent per product, and inaccessible URLs or
+provider fetch failures can fail styling.
 
 Preparation persists each successful product immediately. Running the commands again reuses
 unchanged successful results and retries missing results. Use `--force` for an explicit rebuild.
@@ -172,8 +172,12 @@ cards/totals. Missing user sizes do not mean that a selected offer fits the user
 
 The runtime pipeline is: intent/planning → SQL-filtered retrieval per role → one VLM styling call
 → catalog/application validation → response rewriting → catalog cards. Required-role coverage is
-reserved before optional candidates; the entire pool is capped at 30 visual variants. Impossible
-plans skip the VLM. Different looks may share products, but changing only size offers is not a new look.
+reserved before optional candidates; the entire pool defaults to 16 visual variants. Objective
+catalog facts such as availability, size, budget, and explicit garment type are hard filters. Color
+words are visual criteria, not exact matches against free-text feed color labels; semantic retrieval
+finds candidates and the VLM checks requirements from photos. Explicit visual requirements are
+separate from non-mandatory preferences in `StylingIntent`. Impossible plans skip the VLM. Different
+looks may share products, but changing only size offers is not a new look.
 Sets require confirmed purchasability and are priced once.
 
 The response model cannot replace validated assignments, scores or limitations. A changed catalog

@@ -6,6 +6,8 @@ from ai_stylist.schemas.catalog import CatalogProduct
 from ai_stylist.schemas.planning import OutfitPlan
 from ai_stylist.schemas.retrieval import CandidatePool, MissingRequiredSlot, RetrievalCandidate
 
+MAX_CANDIDATES_PER_REQUIRED_ROLE = 4
+
 
 def matches(record, intent, slot) -> bool:
     return product_matches(record.product, intent, slot) and any(
@@ -61,6 +63,7 @@ def covered_plan(pool: CandidatePool, plan: OutfitPlan, intent) -> OutfitPlan:
 def allocate_pool(request, ranked: dict[tuple[str, str], list[tuple[CatalogProduct, float]]]):
     all_records = {}
     scores = {}
+    required_counts = {}
     for rows in ranked.values():
         for record, score in rows:
             all_records[record.product.id] = record
@@ -77,21 +80,40 @@ def allocate_pool(request, ranked: dict[tuple[str, str], list[tuple[CatalogProdu
         needed = {pid: all_records[pid] for pid in assignment.values()}
         if len(selected.keys() | needed.keys()) <= request.max_products:
             selected.update(needed)
+            for role in assignment:
+                required_counts[composition.plan_id, role] = 1
     # Round robin required slots, then optional slots, retaining reserved complete bases.
     for required in (True, False):
         queues = [
-            list(ranked.get((composition.plan_id, slot.role), []))
+            (
+                (composition.plan_id, slot.role),
+                list(ranked.get((composition.plan_id, slot.role), [])),
+            )
             for composition in viable
             for slot in composition.slots
             if slot.required == required
         ]
-        while any(queues) and len(selected) < request.max_products:
-            for queue in queues:
+        while (
+            any(
+                queue
+                and (
+                    not required
+                    or required_counts.get(key, 0) < MAX_CANDIDATES_PER_REQUIRED_ROLE
+                )
+                for key, queue in queues
+            )
+            and len(selected) < request.max_products
+        ):
+            for key, queue in queues:
+                if required and required_counts.get(key, 0) >= MAX_CANDIDATES_PER_REQUIRED_ROLE:
+                    continue
                 while queue:
                     record, _ = queue.pop(0)
                     if record.product.id not in selected:
                         selected[record.product.id] = record
-                        break
+                    if required:
+                        required_counts[key] = required_counts.get(key, 0) + 1
+                    break
                 if len(selected) == request.max_products:
                     break
     candidates = []
@@ -135,6 +157,8 @@ class Retriever:
                         "occasion": request.intent.occasion,
                         "styles": request.intent.styles,
                         "formality": request.intent.formality,
+                        "colors": request.intent.colors,
+                        "visual_requirements": request.intent.visual_requirements,
                         "fit": request.intent.fit_preferences,
                         "figure_preferences": request.intent.figure_preferences,
                         "avoid": request.intent.avoid,

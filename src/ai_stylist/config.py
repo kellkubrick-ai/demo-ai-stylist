@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     response_reasoning_effort: ReasoningEffort = "none"
     embedding_model: str = ""
     embedding_dimensions: int = Field(default=1536, ge=1)
-    max_candidates: int = Field(default=30, ge=3, le=30)
+    max_candidates: int = Field(default=16, ge=3, le=30)
     request_timeout_seconds: float = Field(default=120, gt=0)
     image_max_bytes: int = Field(default=10_000_000, ge=1)
     offline_concurrency: int = Field(default=2, ge=1, le=10)
