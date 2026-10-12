@@ -13,7 +13,7 @@
 - Embeddings are a current exception: `EmbeddingClient` calls the OpenRouter embeddings endpoint
   directly over HTTP. Preserve that separate path unless an explicit migration is requested.
 
-## Fresh test catalog (100 products)
+## Fresh test catalog (100 or 500 products)
 
 To initialize a new local/test database and run the curated 100-product sample, execute from the
 repository root in PowerShell. Configure `.env` first with the database connection, OpenRouter key,
@@ -38,6 +38,19 @@ uv run ai-stylist embeddings `
 
 uv run ai-stylist catalog-report
 uv run ai-stylist style "Подбери минималистичный женский образ для летнего ужина, без высокого каблука"
+```
+
+To prepare the expanded 500-product sample instead, replace `demo-100.json` in the two
+`--selection` arguments with `demo-500.json` and adjust the report names, for example:
+
+```powershell
+uv run ai-stylist enrich `
+  --selection evals/catalog/demo-500.json `
+  --report data/logs/enrichment/demo-500-server.md
+
+uv run ai-stylist embeddings `
+  --selection evals/catalog/demo-500.json `
+  --report data/reports/demo-500-server-embeddings.jsonl
 ```
 
 - The selection manifest is based on stable product IDs and does not require `catalog_version`.

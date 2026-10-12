@@ -144,9 +144,14 @@ model/color products with available offers, previously checked photos and stored
 The stored enrichment for these 100 was produced by `openai/gpt-6-luna`, not the current Google
 VLM configuration; a Google-specific comparison requires an explicit `enrich --force` run first.
 `enrich` and `embeddings` accept `--selection evals/catalog/demo-100.json` to process only those
-IDs; the manifest's catalog version must match the database. Selecting products does not call
-models or delete catalog rows. With an otherwise empty embeddings table, embedding only this
-selection also limits runtime search to the 100 selected products.
+IDs. Selecting products does not call models or delete catalog rows. With an otherwise empty
+embeddings table, embedding only this selection also limits runtime search to the 100 selected
+products.
+
+An expanded 500-product women's sample is in `evals/catalog/demo-500.json`. It preserves the
+original 100 IDs and adds 400 available catalog products. The new sample requires an available
+offer and a feed image URL; photo usability and enrichment are checked during preparation.
+Use `--selection evals/catalog/demo-500.json` with `enrich` and `embeddings` to prepare it.
 Eight manually labeled retrieval checks are in `evals/catalog/demo-100-search-probes.json`;
 they are candidate-relevance targets, not mandatory final outfit items.
 
